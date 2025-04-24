@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Warmself x 制暖公司</title>
+  <link href="https://fonts.googleapis.com/css2?family=Special+Gothic+Expanded+One&family=Noto+Sans+SC&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" crossorigin="anonymous">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <video id="bg-video" autoplay muted loop>
+    <source src="assets/jellyfish.mov" type="video/quicktime">
+    Your browser does not support the video tag.
+  </video>
+  <header>
+    <div class="logo">
+      <img id="logo-image" src="assets/warmself_black.jpg" alt="Warmself Logo" style="height: 50px; margin-right: 10px;">
+      <span id="dynamic-text"></span>
+    </div>
+    <nav class="menu">
+      <button class="filter-button active" data-filter="all">All</button>
+      <button class="filter-button" data-filter="podcast">Podcasts</button>
+      <button class="filter-button" data-filter="event">Events</button>
+      <button class="filter-button" data-filter="about">About</button>
+    </nav>
+  </header>
+
+  <section class="gallery">
+    <div class="gallery-poster" data-type="podcast">
+      <img src="posters/1.png" alt="Poster 1">
+    </div>
+    <div class="gallery-poster" data-type="event">
+      <img src="posters/2.png" alt="Poster 2">
+    </div>
+    <div class="gallery-poster" data-type="podcast">
+      <img src="posters/3.png" alt="Poster 3">
+    </div>
+    <div class="gallery-poster" data-type="event">
+      <img src="posters/4.png" alt="Poster 4">
+    </div>
+    <div class="gallery-poster" data-type="podcast">
+      <img src="posters/5.png" alt="Poster 5">
+    </div>
+  </section>
+
+  <section class="grid" id="feed">
+    <div class="card" data-type="podcast">
+      <div class="thumbnail"></div>
+      <div class="card-content">
+        <h3>Podcast #1 - 深夜对谈</h3>
+        <p>探索内心温度的第一集，与嘉宾畅谈灵魂。</p>
+      </div>
+    </div>
+    <div class="card" data-type="event">
+      <div class="thumbnail"></div>
+      <div class="card-content">
+        <h3>Event #1 - 制暖放映夜</h3>
+        <p>线下观影加分享会，一起围炉夜话。</p>
+      </div>
+    </div>
+    <div class="card" data-type="podcast">
+      <div class="thumbnail"></div>
+      <div class="card-content">
+        <h3>Podcast #2 - 创作者访谈</h3>
+        <p>与独立音乐人聊创作的温度与孤独。</p>
+      </div>
+    </div>
+    <div class="card" data-type="event">
+      <div class="thumbnail"></div>
+      <div class="card-content">
+        <h3>Event #2 - 黑胶之夜</h3>
+        <p>复古唱片分享和交流夜。</p>
+      </div>
+    </div>
+    <div class="card" data-type="podcast">
+      <div class="thumbnail"></div>
+      <div class="card-content">
+        <h3>Podcast #3 - 城市声音</h3>
+        <p>街头的声音拼贴成一首现代诗。</p>
+      </div>
+    </div>
+    <div class="card" data-type="event">
+      <div class="thumbnail"></div>
+      <div class="card-content">
+        <h3>Event #3 - 沉浸式展览</h3>
+        <p>在空间中体验音乐和光影。</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="about" id="about">
+    <h2>About Warmself x 制暖公司</h2>
+    <p>一个致力于声音、场景与情绪疗愈的创作厂牌。我们将内容带入空间，将温度带入声音。</p>
+  </section>
+
+  <script>
+    (function() {
+      const filterButtons = document.querySelectorAll('.filter-button');
+      const cards = document.querySelectorAll('.card');
+      const aboutSection = document.getElementById('about');
+      const feed = document.getElementById('feed');
+
+      filterButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+          filterButtons.forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          const filter = btn.dataset.filter;
+
+          if (filter === 'about') {
+            aboutSection.style.display = 'block';
+            feed.style.display = 'none';
+          } else {
+            aboutSection.style.display = 'none';
+            feed.style.display = 'grid'; // Corrected 'display = grid' to 'display: grid'
+            cards.forEach(card => {
+              card.style.display = filter === 'all' || card.dataset.type === filter ? 'flex' : 'none';
+            });
+          }
+        });
+      });
+    })();
+  </script>
+  <!-- Floating panel and media player script -->
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      // Function to toggle background mode
+      function toggleBackground() {
+        const bgVideo = document.getElementById('bg-video');
+        const body = document.body;
+
+        if (bgVideo.style.display === 'none' || bgVideo.style.display === '') {
+          bgVideo.style.display = 'block';
+          body.classList.remove('grey-background');
+        } else {
+          bgVideo.style.display = 'none';
+          body.classList.add('grey-background');
+        }
+      }
+
+      // Event listener for key B press
+      document.addEventListener('keydown', (event) => {
+        if (event.key === 'b' || event.key === 'B') {
+          toggleBackground();
+        }
+      });
+
+      // Typewriter effect functions
+      function typeWriter(el, text, speed, callback) {
+        let i = 0;
+        el.innerText = '';
+        (function tick() {
+          if (i < text.length) {
+            el.innerText += text.charAt(i++);
+            setTimeout(tick, speed);
+          } else if (callback) callback();
+        })();
+      }
+
+      function deleteWriter(el, speed, callback) {
+        const txt = el.innerText;
+        let i = txt.length;
+        (function tick() {
+          if (i > 0) {
+            el.innerText = txt.substring(0, --i);
+            setTimeout(tick, speed);
+          } else if (callback) callback();
+        })();
+      }
+
+      // Initial dynamic typewriter
+      const dynamicSpan = document.getElementById('dynamic-text');
+      const dynamicTexts = { all: 'Warmself_制暖公司', podcast: 'Warmself_播客', event: 'Warmself_活动', about: 'Warmself_关于' };
+      const defaultText = dynamicTexts.all;
+      typeWriter(dynamicSpan, defaultText, 50, () => {
+        const stickyBottomBar = document.getElementById('sticky-bottom-bar');
+        stickyBottomBar.insertAdjacentHTML('beforeend', '<button id="play-pause"><i class="fa-solid fa-play"></i></button>');
+
+        // Setup audio player
+        if (!document.getElementById('media-player')) {
+          const playerDiv = document.createElement('div');
+          playerDiv.id = 'media-player';
+          playerDiv.innerHTML = `
+            <input type="range" id="progress" min="0" max="100" value="0">
+            <audio id="audio-player" src="${card.dataset.audio || ''}"></audio>
+          `;
+          const stickyBottomBar = document.getElementById('sticky-bottom-bar');
+          stickyBottomBar.appendChild(playerDiv);
+        }
+
+        // Add event listeners for play/pause button
+        const playBtn = dynamicSpan.querySelector('#play-pause');
+        const audioEl = document.getElementById('audio-player');
+        const progressBar = document.getElementById('progress');
+
+        playBtn.addEventListener('click', () => {
+          if (audioEl.paused) {
+            audioEl.play();
+            playBtn.querySelector('i').classList.replace('fa-play', 'fa-pause');
+          } else {
+            audioEl.pause();
+            playBtn.querySelector('i').classList.replace('fa-pause', 'fa-play');
+          }
+        });
+
+        audioEl.addEventListener('timeupdate', () => {
+          const percent = (audioEl.currentTime / audioEl.duration) * 100;
+          progressBar.value = percent || 0;
+        });
+
+        progressBar.addEventListener('input', () => {
+          const time = (progressBar.value / 100) * audioEl.duration;
+          audioEl.currentTime = time;
+        });
+
+        audioEl.addEventListener('ended', () => {
+          playBtn.querySelector('i').classList.replace('fa-pause', 'fa-play');
+        });
+      });
+
+      // Update dynamic part on filter button clicks
+      const filterButtonsDynamic = document.querySelectorAll('.filter-button');
+      filterButtonsDynamic.forEach(btn => {
+        btn.addEventListener('click', () => {
+          const filter = btn.dataset.filter;
+          const newText = dynamicTexts[filter] || dynamicTexts.all;
+          deleteWriter(dynamicSpan, 25, () => {
+            typeWriter(dynamicSpan, newText, 50);
+          });
+        });
+      });
+
+      const modal = document.createElement('div');
+      modal.id = 'modal-panel';
+      modal.className = 'modal';
+      modal.innerHTML = `
+        <div id="modal-close" class="close-btn">&times;</div>
+        <div id="modal-artwork" class="thumbnail"></div>
+        <h3 id="modal-title"></h3>
+        <p id="modal-content"></p>
+      `;
+      document.body.appendChild(modal);
+
+      const cards = document.querySelectorAll('.card');
+      cards.forEach(card => {
+        card.addEventListener('click', () => {
+          const artworkBg = window.getComputedStyle(card.querySelector('.thumbnail')).background;
+          document.getElementById('modal-artwork').style.background = artworkBg;
+          document.getElementById('modal-title').innerText = card.querySelector('h3').innerText;
+          document.getElementById('modal-content').innerText = card.querySelector('p').innerText;
+          modal.classList.add('active');
+
+          if (card.dataset.type === 'podcast') {
+            deleteWriter(dynamicSpan, 25, () => {
+              // Remove media player from header if it exists
+              const headerMediaPlayer = document.querySelector('header #media-player');
+              if (headerMediaPlayer) {
+                headerMediaPlayer.remove();
+              }
+              // Create media player if not exists
+              if (!document.getElementById('media-player')) {
+                const playerDiv = document.createElement('div');
+                playerDiv.id = 'media-player';
+                playerDiv.innerHTML = `
+                  <input type="range" id="progress" min="0" max="100" value="0">
+                  <audio id="audio-player" src="${card.dataset.audio || ''}"></audio>
+                `;
+                const stickyBottomBar = document.getElementById('sticky-bottom-bar');
+                stickyBottomBar.appendChild(playerDiv);
+              }
+              // Retype podcast title and append play/pause button
+              const newText = dynamicTexts.podcast;
+              typeWriter(dynamicSpan, newText, 50, () => {
+                const stickyBottomBar = document.getElementById('sticky-bottom-bar');
+                stickyBottomBar.insertAdjacentHTML('beforeend', '<button id="play-pause"><i class="fa-solid fa-pause"></i></button>');
+                const playBtn = dynamicSpan.querySelector('#play-pause');
+                const audioEl = document.getElementById('audio-player');
+                const progressBar = document.getElementById('progress');
+
+                playBtn.addEventListener('click', () => {
+                  if (audioEl.paused) {
+                    audioEl.play();
+                    playBtn.querySelector('i').classList.replace('fa-play', 'fa-pause');
+                  } else {
+                    audioEl.pause();
+                    playBtn.querySelector('i').classList.replace('fa-pause', 'fa-play');
+                  }
+                });
+
+                audioEl.addEventListener('timeupdate', () => {
+                  const percent = (audioEl.currentTime / audioEl.duration) * 100;
+                  progressBar.value = percent || 0;
+                });
+
+                progressBar.addEventListener('input', () => {
+                  const time = (progressBar.value / 100) * audioEl.duration;
+                  audioEl.currentTime = time;
+                });
+
+                audioEl.addEventListener('ended', () => {
+                  playBtn.querySelector('i').classList.replace('fa-pause', 'fa-play');
+                });
+              });
+
+              // Handle closing animation
+              const playerDivEl = document.getElementById('media-player');
+              playerDivEl.classList.remove('closing');
+              playerDivEl.addEventListener('animationend', e => {
+                if (e.animationName === 'playerSlideOut') {
+                  playerDivEl.remove();
+                  // Retrigger dynamic typewriter based on active filter
+                  const activeFilter = document.querySelector('.filter-button.active').dataset.filter;
+                  const retriggerText = dynamicTexts[activeFilter] || dynamicTexts.all;
+                  typeWriter(dynamicSpan, retriggerText, 50);
+                }
+              });
+            });
+          }
+        });
+      });
+
+      document.getElementById('modal-close').addEventListener('click', () => {
+        modal.classList.remove('active');
+      });
+    });
+  </script>
+  <div id="sticky-bottom-bar" class="sticky-bottom-bar">
+    <!-- Media player will be inserted here -->
+  </div>
+</body>
+</html>

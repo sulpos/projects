@@ -1,0 +1,1963 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clinic Simulator</title>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Noto+Sans+SC:wght@300;400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #4a6fa5;
+            --secondary: #ff6b6b;
+            --tertiary: #4ecdc4;
+            --quaternary: #ffbe0b;
+            --text: #e0e0e0;
+            --background: #121212;
+            --card: #1e1e1e;
+            --border: #333333;
+            --transition-duration: 0.3s;
+            --title-font: 'Press Start 2P', cursive;
+            --chinese-font: 'Noto Sans SC', sans-serif;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Courier New', monospace;
+            background-color: var(--background);
+            color: var(--text);
+            line-height: 1.6;
+            padding: 20px;
+            max-width: 800px;
+            margin: 0 auto;
+            text-align: center;
+        }
+
+        /* Add a class for Chinese text */
+        .chinese-text {
+            font-family: var(--chinese-font), sans-serif;
+        }
+
+        h1, h2, h3 {
+            font-family: var(--title-font), monospace;
+            margin-bottom: 20px;
+            color: var(--tertiary);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        h1 {
+            font-size: 2rem;
+            margin-top: 20px;
+            text-shadow: 3px 3px 0px rgba(0, 0, 0, 0.5);
+            animation: pulse 2s infinite;
+        }
+
+        .stats-bar {
+            display: flex;
+            justify-content: space-between;
+            background-color: var(--card);
+            border: 2px solid var(--border);
+            padding: 10px;
+            margin-bottom: 20px;
+            font-family: var(--title-font), monospace;
+            font-size: 0.8rem;
+        }
+
+        .clinic-view {
+            width: 100%;
+            height: 300px;
+            background-color: var(--card);
+            border: 4px solid var(--border);
+            border-radius: 8px;
+            position: relative;
+            overflow: hidden;
+            margin-bottom: 20px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+        }
+
+        .doctor-table {
+            position: absolute;
+            left: 20%;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 100px;
+            height: 60px;
+            background-image: url('assets/doctor-desk.png');
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+            z-index: 1;
+            border: none;
+        }
+
+        .beds-container {
+            position: absolute;
+            right: 20px;
+            top: 20px;
+            /* Grid layout: flow items into columns, max 4 rows per column */
+            display: grid;
+            grid-auto-flow: column;
+            grid-template-rows: repeat(4, auto);
+            grid-auto-columns: 100px;
+            gap: 10px;
+            transform: none;
+        }
+
+        .bed {
+            width: 100px;
+            height: 50px;
+            background-image: url('assets/hospital-bed.png');
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+            position: relative;
+            transition: all 0.3s;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .bed.occupied {
+            filter: brightness(0.7);
+        }
+
+        .bed .patient-avatar {
+            position: absolute;
+            width: 60px;
+            height: 60px;
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .bed.occupied .patient-avatar {
+            opacity: 1;
+        }
+
+        .patient {
+            position: absolute;
+            width: 60px;
+            height: 60px;
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+            left: 20%;
+            top: 30%;
+            transform: translateY(-50%);
+            transition: top 1s ease-in-out;
+            z-index: 2;
+        }
+
+        .patient .health-bar {
+            position: absolute;
+            top: -8px;
+            left: 0;
+            width: 100%;
+            height: 6px;
+            background-color: #330000;
+            border-radius: 3px;
+            overflow: hidden;
+            z-index: 3;
+        }
+
+        .patient .health-bar-inner {
+            height: 100%;
+            background-color: #ff0000;
+            width: 100%; /* set via JS */
+        }
+
+        .explosion-particle {
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            background-color: #8B0000;
+            border: none;
+            z-index: 0;
+            opacity: 1;
+        }
+
+        .blood-particle {
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            background-color: #8B0000;
+            border: none;
+            z-index: 0;
+            opacity: 1;
+        }
+
+        .blood-splash {
+            position: absolute;
+            width: 80px;
+            height: 80px;
+            background-color: var(--secondary);
+            border-radius: 50%;
+            z-index: 2;
+            opacity: 0;
+            transform: scale(0);
+        }
+
+        .patient-info {
+            background-color: rgba(0, 0, 0, 0.3);
+            border: 2px solid var(--border);
+            padding: 10px;
+            margin-bottom: 20px;
+        }
+
+        .dialogue-box {
+            background-color: rgba(0, 0, 0, 0.3);
+            border: 2px solid var(--border);
+            padding: 15px;
+            margin-bottom: 20px;
+            min-height: 150px;
+            overflow-y: auto;
+            max-height: 250px;
+        }
+
+        .dialogue-text {
+            margin-bottom: 10px;
+            font-weight: bold;
+            opacity: 0;
+            transform: translateY(10px);
+            animation: textAppear 0.5s forwards;
+        }
+
+        .dialogue-text.typing {
+            animation: none;
+            opacity: 1;
+            transform: none;
+        }
+
+        .dialogue-text.typing::after {
+            content: '|';
+            animation: blink 1s infinite;
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0; }
+        }
+
+        .patient-text {
+            color: var(--secondary);
+        }
+
+        .doctor-text {
+            color: var(--tertiary);
+        }
+
+        .options-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .option-btn {
+            background-color: var(--card);
+            border: 2px solid var(--border);
+            color: var(--text);
+            padding: 10px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            transition: all 0.3s;
+            text-align: left;
+        }
+
+        .option-btn:hover {
+            background-color: var(--primary);
+            transform: translateY(-2px);
+        }
+
+        .action-btn {
+            background-color: var(--tertiary);
+            border: none;
+            color: #000;
+            padding: 10px 20px;
+            margin: 10px 5px;
+            cursor: pointer;
+            font-family: var(--title-font), monospace;
+            font-size: 0.8rem;
+            transition: all 0.3s;
+        }
+
+        .action-btn:hover {
+            background-color: var(--quaternary);
+            transform: translateY(-2px);
+        }
+
+        .menu {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: var(--card);
+            border: 4px solid var(--border);
+            padding: 20px;
+            z-index: 100;
+            display: none;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.7);
+        }
+
+        .menu-btn {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background-color: var(--primary);
+            color: var(--text);
+            border: none;
+            padding: 10px;
+            cursor: pointer;
+            font-family: var(--title-font), monospace;
+            z-index: 101;
+        }
+
+        .music-player {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background-color: var(--card);
+            border: 2px solid var(--border);
+            padding: 10px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            z-index: 100;
+            opacity: 0.8;
+            transition: opacity 0.3s;
+        }
+
+        .music-player:hover {
+            opacity: 1;
+        }
+
+        .music-controls {
+            display: flex;
+            gap: 5px;
+        }
+
+        .music-btn {
+            background-color: var(--primary);
+            color: var(--text);
+            border: none;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: var(--title-font), monospace;
+            font-size: 0.8rem;
+            transition: transform 0.2s;
+        }
+
+        .music-btn:hover {
+            transform: scale(1.1);
+        }
+
+        .music-info {
+            font-family: var(--title-font), monospace;
+            font-size: 0.8rem;
+            color: var(--text);
+            max-width: 200px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            z-index: 99;
+            display: none;
+        }
+
+        .language-btn {
+            background-color: var(--card);
+            border: 2px solid var(--border);
+            color: var(--text);
+            padding: 10px;
+            margin: 5px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            transition: all 0.3s;
+        }
+
+        .language-btn:hover {
+            background-color: var(--primary);
+        }
+
+        .pixel-art {
+            image-rendering: pixelated;
+            width: 100px;
+            height: 100px;
+            margin: 0 auto 20px;
+            background-color: var(--quaternary);
+            border: 2px solid var(--border);
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        @keyframes textAppear {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes patientEnter {
+            from { top: -50px; }
+            to { top: 30%; }
+        }
+
+        @keyframes patientExit {
+            from { top: 30%; }
+            to { top: -50px; }
+        }
+
+        @keyframes patientToBed {
+            from { top: 30%; left: 20%; }
+            to { top: var(--bed-top); left: 80%; }
+        }
+
+        @keyframes explode {
+            0% {
+                transform: scale(1);
+                opacity: 1;
+            }
+            100% {
+                transform: scale(0);
+                opacity: 0;
+            }
+        }
+
+        @keyframes particleFly {
+            0% {
+                transform: translate(0, 0) rotate(0deg);
+                opacity: 1;
+            }
+            100% {
+                transform: translate(var(--tx), var(--ty)) rotate(360deg);
+                opacity: 1;
+            }
+        }
+
+        @keyframes splash {
+            0% {
+                transform: scale(0);
+                opacity: 0;
+            }
+            50% {
+                transform: scale(1.2);
+                opacity: 0.8;
+            }
+            100% {
+                transform: scale(1);
+                opacity: 0;
+            }
+        }
+
+        @media (max-width: 600px) {
+            .options-container {
+                grid-template-columns: 1fr;
+            }
+            .game-container {
+                padding: 10px;
+            }
+            .clinic-view {
+                height: 150px;
+            }
+            .doctor-table {
+                width: 80px;
+                height: 50px;
+                font-size: 0.7rem;
+            }
+            .bed {
+                width: 36px;
+                height: 18px;
+            }
+            .patient {
+                width: 25px;
+                height: 40px;
+            }
+        }
+
+        /* Layout patient info and dialogue inline */
+        .game-container {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: flex-start;
+        }
+        /* Patient info takes 25% width */
+        .game-container > #patient-info {
+            flex: 0 0 25%;
+            margin: 0 10px 0 0;
+            margin-bottom: 0;
+        }
+        /* Dialogue box takes 75% width and scrollable */
+        .game-container > #dialogue-box {
+            flex: 1;
+            max-width: 75%;
+            margin: 0;
+            overflow-y: auto;
+        }
+        /* Ensure containers below take full width */
+        #start-container,
+        #options-container,
+        #diagnosis-container,
+        #treatment-container {
+            flex: 0 0 100%;
+            margin-top: 10px;
+        }
+
+        .stats-bar div.prestige-container {
+            position: relative;
+            display: inline-block;
+        }
+        .prestige-menu {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            background-color: var(--card);
+            border: 2px solid var(--border);
+            padding: 5px;
+            z-index: 200;
+        }
+        .prestige-container:hover .prestige-menu {
+            display: block;
+        }
+
+        /* Fan-out card animation for options */
+        .card-option {
+            position: absolute;
+            background-color: var(--card);
+            border: 2px solid var(--border);
+            color: var(--text);
+            padding: 10px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            transition: transform 0.5s ease-out, opacity 0.5s ease-out;
+            opacity: 0;
+            z-index: 1000;
+            border-radius: 4px;
+            white-space: nowrap;
+        }
+
+        /* Queue of upcoming patients */
+        .patient-queue {
+            position: absolute;
+            left: 5%;
+            top: 50%;
+            transform: translateY(-50%);
+            display: flex;
+            gap: 10px;
+            z-index: 2;
+        }
+        .queue-avatar {
+            width: 40px;
+            height: 40px;
+            background-size: contain;
+            background-repeat: no-repeat;
+        }
+
+        /* Treatment panel layout */
+        .treatment-panel {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <audio id="background-music" loop>
+        <source src="music/track1.mp3" type="audio/mpeg">
+        <source src="music/track2.mp3" type="audio/mpeg">
+        <source src="music/track3.mp3" type="audio/mpeg">
+    </audio>
+
+    <div class="music-player">
+        <div class="music-controls">
+            <button class="music-btn" id="play-pause-btn">▶</button>
+        </div>
+        <div class="music-info" id="music-info">No music playing</div>
+    </div>
+
+    <h1 id="main-title" style="cursor: pointer;">Clinic Simulator</h1>
+    
+    <div class="stats-bar">
+        <div>Day: <span id="day">1</span></div>
+        <div>Round: <span id="round">1</span>/<span id="rounds-total">6</span></div>
+        <div class="prestige-container">Prestige: <span id="prestige">100</span>
+            <div id="prestige-menu" class="prestige-menu">
+                <button id="buy-bed-btn" class="action-btn">Buy Bed (20 pts)</button>
+            </div>
+        </div>
+        <div>Beds: <span id="beds-available">5</span>/<span id="beds-total">5</span></div>
+    </div>
+    
+    <div class="clinic-view">
+        <div class="patient-queue" id="patient-queue"></div>
+        <div class="doctor-table"></div>
+        <div class="beds-container">
+            <div class="bed"></div>
+            <div class="bed"></div>
+            <div class="bed"></div>
+            <div class="bed"></div>
+            <div class="bed"></div>
+        </div>
+    </div>
+    
+    <div class="game-container">
+        <div class="patient-info" id="patient-info">
+            Waiting for patient...
+        </div>
+        
+        <div class="dialogue-box" id="dialogue-box">
+            <div class="dialogue-text">Welcome to your clinic! Press Start to begin your day.</div>
+        </div>
+        
+        <div id="start-container">
+            <button class="action-btn" id="start-btn">Start Day</button>
+        </div>
+        
+        <!-- Treatment options panel, shown after correct diagnosis -->
+        <div class="treatment-panel" id="treatment-panel" style="display: none;">
+            <button class="action-btn" id="treat-inpatient">Admit to Clinic</button>
+            <button class="action-btn" id="treat-outpatient">Outpatient Treatment</button>
+        </div>
+    </div>
+    
+    <button class="menu-btn" id="menu-btn">M</button>
+    
+    <div class="overlay" id="overlay"></div>
+    
+    <div class="menu" id="menu">
+        <h2>Menu</h2>
+        <h3>Language</h3>
+        <div>
+            <button class="language-btn" data-lang="en">English</button>
+            <button class="language-btn" data-lang="es">Español</button>
+            <button class="language-btn" data-lang="fr">Français</button>
+            <button class="language-btn" data-lang="de">Deutsch</button>
+            <button class="language-btn" data-lang="zh">中文</button>
+        </div>
+        <button class="action-btn" id="close-menu-btn">Close</button>
+    </div>
+    
+    <!-- Buttons for diagnosis and questions -->
+    <div class="action-panel">
+        <button class="action-btn" id="diagnose-btn">Make Diagnosis</button>
+        <button class="action-btn" id="more-info-btn">Ask More Questions</button>
+    </div>
+    
+    <script>
+        // Game state
+        const gameState = {
+            day: 1,
+            round: 1,
+            maxRounds: Math.floor(Math.random() * 4) + 3, // Random number between 3-6
+            prestige: 100,
+            bedsTotal: 5,
+            bedsAvailable: 5,
+            currentPatient: null,
+            conversationStage: 0,
+            language: 'en',
+            patients: [],
+            diagnoses: [
+                { id: 1, name: "Common Cold", symptoms: ["cough", "runny nose", "sore throat", "sneezing", "mild fever"] },
+                { id: 2, name: "Flu", symptoms: ["high fever", "body aches", "fatigue", "cough", "headache"] },
+                { id: 3, name: "Food Poisoning", symptoms: ["nausea", "vomiting", "diarrhea", "stomach cramps", "fever"] },
+                { id: 4, name: "Migraine", symptoms: ["severe headache", "sensitivity to light", "nausea", "blurred vision"] },
+                { id: 5, name: "Sprained Ankle", symptoms: ["swelling", "bruising", "pain", "difficulty walking", "stiffness"] },
+                { id: 6, name: "Allergic Reaction", symptoms: ["rash", "itching", "swelling", "difficulty breathing", "hives"] },
+                { id: 7, name: "Strep Throat", symptoms: ["severe sore throat", "difficulty swallowing", "fever", "swollen lymph nodes"] },
+                { id: 8, name: "Bronchitis", symptoms: ["persistent cough", "chest discomfort", "fatigue", "mild fever", "shortness of breath"] }
+            ],
+            occupiedBeds: new Set()
+        };
+        
+        // DOM elements
+        const dayEl = document.getElementById('day');
+        const roundEl = document.getElementById('round');
+        const roundsTotalEl = document.getElementById('rounds-total');
+        const prestigeEl = document.getElementById('prestige');
+        const bedsAvailableEl = document.getElementById('beds-available');
+        const bedsTotalEl = document.getElementById('beds-total');
+        const patientInfoEl = document.getElementById('patient-info');
+        const dialogueBoxEl = document.getElementById('dialogue-box');
+        const startContainerEl = document.getElementById('start-container');
+        const startBtnEl = document.getElementById('start-btn');
+        const optionsContainerEl = document.getElementById('options-container');
+        const treatmentContainerEl = document.getElementById('treatment-container');
+        const treatInpatientBtnEl = document.getElementById('treat-inpatient');
+        const treatOutpatientBtnEl = document.getElementById('treat-outpatient');
+        const menuBtnEl = document.getElementById('menu-btn');
+        const menuEl = document.getElementById('menu');
+        const overlayEl = document.getElementById('overlay');
+        const closeMenuBtnEl = document.getElementById('close-menu-btn');
+        const languageBtns = document.querySelectorAll('.language-btn');
+        const clinicView = document.querySelector('.clinic-view');
+        let beds = document.querySelectorAll('.bed');
+        const backgroundMusic = document.getElementById('background-music');
+        const playPauseBtn = document.getElementById('play-pause-btn');
+        const musicInfo = document.getElementById('music-info');
+        const buyBedBtnEl = document.getElementById('buy-bed-btn');
+        const diagnoseBtnEl = document.getElementById('diagnose-btn');
+        const moreInfoBtnEl = document.getElementById('more-info-btn');
+        
+        // Music player state
+        const musicState = {
+            isPlaying: false,
+            currentTrack: 0,
+            tracks: [
+                { name: "Track 1", src: "music/track1.mp3" },
+                { name: "Track 2", src: "music/track2.mp3" },
+                { name: "Track 3", src: "music/track3.mp3" }
+            ]
+        };
+        
+        // Translations
+        const translations = {
+            en: {
+                welcome: "Welcome to your clinic! Press Start to begin your day.",
+                startDay: "Start Day",
+                waiting: "Waiting for patient...",
+                makeDiagnosis: "Make Diagnosis",
+                askMore: "Ask More Questions",
+                admitClinic: "Admit to Clinic",
+                outpatient: "Outpatient Treatment",
+                day: "Day",
+                round: "Round",
+                prestige: "Prestige",
+                beds: "Beds",
+                menu: "Menu",
+                language: "Language",
+                close: "Close",
+                nextPatient: "Next patient, please!",
+                endDay: "End of day! {released} patient(s) have been discharged.",
+                tomorrowPatients: "Tomorrow you will see {count} patients.",
+                patientInfo: {
+                    name: "Name",
+                    age: "Age",
+                    weight: "Weight",
+                    height: "Height"
+                },
+                symptoms: {
+                    cough: "cough",
+                    runnyNose: "runny nose",
+                    soreThroat: "sore throat",
+                    sneezing: "sneezing",
+                    mildFever: "mild fever",
+                    highFever: "high fever",
+                    bodyAches: "body aches",
+                    fatigue: "fatigue",
+                    headache: "headache",
+                    nausea: "nausea",
+                    vomiting: "vomiting",
+                    diarrhea: "diarrhea",
+                    stomachCramps: "stomach cramps",
+                    blurredVision: "blurred vision",
+                    swelling: "swelling",
+                    bruising: "bruising",
+                    pain: "pain",
+                    difficultyWalking: "difficulty walking",
+                    stiffness: "stiffness",
+                    rash: "rash",
+                    itching: "itching",
+                    difficultyBreathing: "difficulty breathing",
+                    hives: "hives",
+                    difficultySwallowing: "difficulty swallowing",
+                    swollenLymphNodes: "swollen lymph nodes",
+                    chestDiscomfort: "chest discomfort",
+                    shortnessOfBreath: "shortness of breath"
+                },
+                questions: {
+                    howLong: "You've been feeling unwell for how long?",
+                    medications: "Are you taking any medications?",
+                    similarSymptoms: "Have you had similar symptoms before?",
+                    symptomsBetterWorse: "Is there anything that makes your symptoms better or worse?",
+                    contactSick: "Have you been in contact with someone who is sick?",
+                    appetiteSleep: "How is your appetite and sleep?",
+                    moreSymptoms: "Can you describe your symptoms more in detail?"
+                },
+                responses: {
+                    noMedications: "No, I'm not taking any medications.",
+                    otcPainRelievers: "Just taking some over-the-counter pain relievers.",
+                    bloodPressure: "I'm on blood pressure medication.",
+                    antihistamines: "I'm taking antihistamines for allergies.",
+                    unsure: "Honestly, I'm not sure.",
+                    notNoticed: "That's a good question. I haven't noticed it much.",
+                    nothingUnusual: "No, I can't think of anything unusual.",
+                    worseEvenings: "Yes, it seems to get worse at night.",
+                    toldAllSymptoms: "I think I've told you all my symptoms.",
+                    daysAgo: "About {days} days ago."
+                },
+                diagnoses: {
+                    commonCold: "Common Cold",
+                    flu: "Flu",
+                    foodPoisoning: "Food Poisoning",
+                    migraine: "Migraine",
+                    sprainedAnkle: "Sprained Ankle",
+                    allergicReaction: "Allergic Reaction",
+                    strepThroat: "Strep Throat",
+                    bronchitis: "Bronchitis"
+                },
+                // Medication options
+                medOptions: {
+                    antibiotics: "Give Antibiotics",
+                    morphine: "Give Morphine",
+                    painkiller: "Give Painkiller",
+                    antihistamine: "Give Antihistamine"
+                },
+                treatments: {
+                    inpatient: "I recommend you stay in the hospital for treatment.",
+                    outpatient: "I'll give you some medicine to take at home.",
+                    noBeds: "I recommend you stay in the hospital, but we don't have any beds available.",
+                    patientResponse: {
+                        inpatientAgree: "Thank you doctor, I think this is the right decision.",
+                        inpatientDisagree: "Is it really necessary? I hope I can go home...",
+                        outpatientAgree: "Thank you doctor, I appreciate your help.",
+                        outpatientDisagree: "Are you sure? I feel very uncomfortable..."
+                    }
+                }
+            },
+            es: {
+                welcome: "¡Bienvenido a su clínica! Presione Iniciar para comenzar su día.",
+                startDay: "Iniciar Día",
+                waiting: "Esperando paciente...",
+                makeDiagnosis: "Hacer Diagnóstico",
+                askMore: "Hacer Más Preguntas",
+                admitClinic: "Admitir en Clínica",
+                outpatient: "Tratamiento Ambulatorio",
+                day: "Día",
+                round: "Ronda",
+                prestige: "Prestigio",
+                beds: "Camas",
+                menu: "Menú",
+                language: "Idioma",
+                close: "Cerrar",
+                nextPatient: "¡Siguiente paciente, por favor!",
+                endDay: "¡Fin del día! {released} paciente(s) ha(n) sido dado(s) de alta.",
+                tomorrowPatients: "Mañana atenderá a {count} pacientes.",
+                patientInfo: {
+                    name: "Nombre",
+                    age: "Edad",
+                    weight: "Peso",
+                    height: "Altura"
+                },
+                symptoms: {
+                    cough: "tos",
+                    runnyNose: "secreción nasal",
+                    soreThroat: "dolor de garganta",
+                    sneezing: "estornudos",
+                    mildFever: "fiebre leve",
+                    highFever: "fiebre alta",
+                    bodyAches: "dolores corporales",
+                    fatigue: "fatiga",
+                    headache: "dolor de cabeza",
+                    nausea: "náuseas",
+                    vomiting: "vómitos",
+                    diarrhea: "diarrea",
+                    stomachCramps: "calambres estomacales",
+                    blurredVision: "visión borrosa",
+                    swelling: "hinchazón",
+                    bruising: "moretones",
+                    pain: "dolor",
+                    difficultyWalking: "dificultad para caminar",
+                    stiffness: "rigidez",
+                    rash: "erupción",
+                    itching: "picazón",
+                    difficultyBreathing: "dificultad para respirar",
+                    hives: "urticaria",
+                    difficultySwallowing: "dificultad para tragar",
+                    swollenLymphNodes: "ganglios linfáticos inflamados",
+                    chestDiscomfort: "malestar en el pecho",
+                    shortnessOfBreath: "falta de aire"
+                },
+                questions: {
+                    howLong: "¿Hace cuánto tiempo lleva sintiéndose mal?",
+                    medications: "¿Estás tomando algún medicamento?",
+                    similarSymptoms: "¿Has tenido síntomas similares antes?",
+                    symptomsBetterWorse: "¿Hay algo que hace que tus síntomas mejoran o empeoren?",
+                    contactSick: "¿Has estado en contacto con alguien que está enfermo?",
+                    appetiteSleep: "¿Cómo está tu apetito y tu sueño?",
+                    moreSymptoms: "¿Puedes describir tus síntomas con más detalle?"
+                },
+                responses: {
+                    noMedications: "No, no estoy tomando ningún medicamento.",
+                    otcPainRelievers: "Solo tomo algunos analgésicos de venta libre.",
+                    bloodPressure: "Estoy tomando medicamentos para la presión arterial.",
+                    antihistamines: "Estoy tomando antihistamínicos para alergias.",
+                    unsure: "En serio, no estoy seguro.",
+                    notNoticed: "Eso es una buena pregunta. No lo he notado mucho.",
+                    nothingUnusual: "No, no puedo pensar en nada extraño.",
+                    worseEvenings: "Sí, parece empeorar por la noche.",
+                    toldAllSymptoms: "Creo que te he contado todos mis síntomas.",
+                    daysAgo: "Hace {days} días."
+                },
+                diagnoses: {
+                    commonCold: "Resfriado Común",
+                    flu: "Gripe",
+                    foodPoisoning: "Intoxicación por Alimentos",
+                    migraine: "Migraña",
+                    sprainedAnkle: "Rollo de tobillo",
+                    allergicReaction: "Reacción Alérgica",
+                    strepThroat: "Infección de garganta por estreptococo",
+                    bronchitis: "Bronquitis"
+                },
+                // Medication options
+                medOptions: {
+                    antibiotics: "Dar Antibióticos",
+                    morphine: "Dar Morfina",
+                    painkiller: "Dar Dolorcito",
+                    antihistamine: "Dar Antihistamínico"
+                },
+                treatments: {
+                    inpatient: "Te recomiendo que te quedes en el hospital para tratamiento.",
+                    outpatient: "Te daré algunas medicinas para que las tomes en casa.",
+                    noBeds: "Te recomiendo que te quedes en el hospital, pero no tenemos camas disponibles.",
+                    patientResponse: {
+                        inpatientAgree: "Gracias doctor, creo que esta es la decisión correcta.",
+                        inpatientDisagree: "¿De verdad es necesario? Espero poder irme a casa...",
+                        outpatientAgree: "Gracias doctor, lo aprecio su ayuda.",
+                        outpatientDisagree: "¿Estás seguro? Me siento muy incómodo..."
+                    }
+                }
+            },
+            fr: {
+                welcome: "Bienvenue dans votre clinique ! Appuyez sur Démarrer pour commencer votre journée.",
+                startDay: "Démarrer la Journée",
+                waiting: "En attente d'un patient...",
+                makeDiagnosis: "Établir un Diagnostic",
+                askMore: "Poser Plus de Questions",
+                admitClinic: "Admettre à la Clinique",
+                outpatient: "Traitement Ambulatoire",
+                day: "Jour",
+                round: "Tour",
+                prestige: "Prestige",
+                beds: "Lits",
+                menu: "Menu",
+                language: "Langue",
+                close: "Fermer",
+                nextPatient: "Patient suivant, s'il vous plaît !",
+                endDay: "Fin de journée ! {released} patient(s) a(ont) été libéré(s).",
+                tomorrowPatients: "Demain, vous verrez {count} patients.",
+                patientInfo: {
+                    name: "Nom",
+                    age: "Âge",
+                    weight: "Poids",
+                    height: "Taille"
+                },
+                symptoms: {
+                    cough: "toux",
+                    runnyNose: "nez qui coule",
+                    soreThroat: "mal de gorge",
+                    sneezing: "éternuements",
+                    mildFever: "fièvre légère",
+                    highFever: "forte fièvre",
+                    bodyAches: "courbatures",
+                    fatigue: "fatigue",
+                    headache: "mal de tête",
+                    nausea: "nausées",
+                    vomiting: "vomissements",
+                    diarrhea: "diarrhée",
+                    stomachCramps: "crampes d'estomac",
+                    blurredVision: "vision trouble",
+                    swelling: "gonflement",
+                    bruising: "ecchymoses",
+                    pain: "douleur",
+                    difficultyWalking: "difficulté à marcher",
+                    stiffness: "raideur",
+                    rash: "éruption cutanée",
+                    itching: "démangeaisons",
+                    difficultyBreathing: "difficulté à respirer",
+                    hives: "urticaire",
+                    difficultySwallowing: "difficulté à avaler",
+                    swollenLymphNodes: "ganglions lymphatiques enflés",
+                    chestDiscomfort: "gêne thoracique",
+                    shortnessOfBreath: "essoufflement"
+                },
+                questions: {
+                    howLong: "Depuis combien de temps êtes-vous malade?",
+                    medications: "Prenez-vous des médicaments?",
+                    similarSymptoms: "Avez-vous eu des symptômes similaires auparavant?",
+                    symptomsBetterWorse: "Y a-t-il quelque chose qui rend vos symptômes meilleurs ou pires?",
+                    contactSick: "Avez-vous été en contact avec quelqu'un qui est malade?",
+                    appetiteSleep: "Comment est votre appétit et votre sommeil?",
+                    moreSymptoms: "Pouvez-vous décrire vos symptômes plus en détail?"
+                },
+                responses: {
+                    noMedications: "Non, je ne prends aucun médicament.",
+                    otcPainRelievers: "J'ai pris quelques médicaments à l'étape libre.",
+                    bloodPressure: "Je prends des médicaments pour la pression artérielle.",
+                    antihistamines: "Je prends des antihistaminiques pour les allergies.",
+                    unsure: "Sérieusement, je ne suis pas sûr.",
+                    notNoticed: "C'est une bonne question. Je ne l'ai pas remarqué beaucoup.",
+                    nothingUnusual: "Non, je ne peux pas penser à quelque chose d'anormal.",
+                    worseEvenings: "Oui, ça semble s'améliorer la nuit.",
+                    toldAllSymptoms: "Je pense que je vous ai dit tous mes symptômes.",
+                    daysAgo: "Il y a {days} jours."
+                },
+                diagnoses: {
+                    commonCold: "Rhume",
+                    flu: "Grippe",
+                    foodPoisoning: "Intoxication Alimentaire",
+                    migraine: "Migraine",
+                    sprainedAnkle: "Roulement de cheville",
+                    allergicReaction: "Réaction Allergique",
+                    strepThroat: "Infection de la gorge par streptocoque",
+                    bronchitis: "Bronchite"
+                },
+                // Medication options
+                medOptions: {
+                    antibiotics: "Donner des Antibiotiques",
+                    morphine: "Donner de la Morphine",
+                    painkiller: "Donner un Dolorcito",
+                    antihistamine: "Donner un Antihistamínico"
+                },
+                treatments: {
+                    inpatient: "Je vous recommande de rester à l'hôpital pour le traitement.",
+                    outpatient: "Je vais vous donner quelques médicaments à prendre à la maison.",
+                    noBeds: "Je vous recommande de rester à l'hôpital, mais nous n'avons plus de lits disponibles.",
+                    patientResponse: {
+                        inpatientAgree: "Merci docteur, je pense que cette est la bonne décision.",
+                        inpatientDisagree: "Est-ce vraiment nécessaire? J'espère pouvoir rentrer à la maison...",
+                        outpatientAgree: "Merci docteur, je vous remercie pour votre aide.",
+                        outpatientDisagree: "Êtes-vous sûr? Je me sens très mal à l'aise..."
+                    }
+                }
+            },
+            de: {
+                welcome: "Willkommen in Ihrer Klinik! Drücken Sie Start, um Ihren Tag zu beginnen.",
+                startDay: "Tag Starten",
+                waiting: "Warten auf Patient...",
+                makeDiagnosis: "Diagnose Stellen",
+                askMore: "Mehr Fragen Stellen",
+                admitClinic: "In Klinik Aufnehmen",
+                outpatient: "Ambulante Behandlung",
+                day: "Tag",
+                round: "Runde",
+                prestige: "Prestige",
+                beds: "Betten",
+                menu: "Menü",
+                language: "Sprache",
+                close: "Schließen",
+                nextPatient: "Nächster Patient, bitte!",
+                endDay: "Ende des Tages! {released} Patient(en) wurde(n) entlassen.",
+                tomorrowPatients: "Morgen werden Sie {count} Patienten sehen.",
+                patientInfo: {
+                    name: "Name",
+                    age: "Alter",
+                    weight: "Gewicht",
+                    height: "Größe"
+                },
+                symptoms: {
+                    cough: "Husten",
+                    runnyNose: "laufende Nase",
+                    soreThroat: "Halsschmerzen",
+                    sneezing: "Niesen",
+                    mildFever: "leichtes Fieber",
+                    highFever: "hohes Fieber",
+                    bodyAches: "Gliederschmerzen",
+                    fatigue: "Müdigkeit",
+                    headache: "Kopfschmerzen",
+                    nausea: "Übelkeit",
+                    vomiting: "Erbrechen",
+                    diarrhea: "Durchfall",
+                    stomachCramps: "Magenkrämpfe",
+                    blurredVision: "verschwommenes Sehen",
+                    swelling: "Schwellung",
+                    bruising: "Prellungen",
+                    pain: "Schmerzen",
+                    difficultyWalking: "Gehbeschwerden",
+                    stiffness: "Steifheit",
+                    rash: "Ausschlag",
+                    itching: "Juckreiz",
+                    difficultyBreathing: "Atembeschwerden",
+                    hives: "Nesselsucht",
+                    difficultySwallowing: "Schluckbeschwerden",
+                    swollenLymphNodes: "geschwollene Lymphknoten",
+                    chestDiscomfort: "Brustbeschwerden",
+                    shortnessOfBreath: "Kurzatmigkeit"
+                },
+                questions: {
+                    howLong: "Wie lange hast du krank geworden?",
+                    medications: "Nimmst du Medikamente?",
+                    similarSymptoms: "Hattest du ähnliche Symptome vorher?",
+                    symptomsBetterWorse: "Gibt es etwas, das deine Symptome bessert oder verschlimmert?",
+                    contactSick: "Bist du mit jemandem in Kontakt, der krank ist?",
+                    appetiteSleep: "Wie ist dein Appetit und dein Schlaf?",
+                    moreSymptoms: "Kannst du deine Symptome genauer beschreiben?"
+                },
+                responses: {
+                    noMedications: "Nein, ich nehme keine Medikamente.",
+                    otcPainRelievers: "Ich nehme nur einige OTC-Schmerzmittel.",
+                    bloodPressure: "Ich nehme Blutdrucksenker.",
+                    antihistamines: "Ich nehme Antihistaminika für Allergien.",
+                    unsure: "Ernsthaft, ich bin mir nicht sicher.",
+                    notNoticed: "Das ist eine gute Frage. Ich habe es nicht viel bemerkt.",
+                    nothingUnusual: "Nein, ich kann mir keine ungewöhnlichen Dinge vorstellen.",
+                    worseEvenings: "Ja, es scheint schlimmer zu werden, wenn es nachts ist.",
+                    toldAllSymptoms: "Ich denke, ich habe Ihnen alle meine Symptome erzählt.",
+                    daysAgo: "Vor {days} Tagen."
+                },
+                diagnoses: {
+                    commonCold: "Erkältung",
+                    flu: "Grippe",
+                    foodPoisoning: "Lebensmittelvergiftung",
+                    migraine: "Kopfschmerzen",
+                    sprainedAnkle: "Gelenksprain",
+                    allergicReaction: "Allergische Reaktion",
+                    strepThroat: "Streptococcus-Kehlkopfinfektion",
+                    bronchitis: "Bronchitis"
+                },
+                // Medication options
+                medOptions: {
+                    antibiotics: "Antibiotika nehmen",
+                    morphine: "Morfin nehmen",
+                    painkiller: "Schmerzmittel nehmen",
+                    antihistamine: "Antihistaminika nehmen"
+                },
+                treatments: {
+                    inpatient: "Ich empfehle Ihnen, sich im Krankenhaus zu behandeln.",
+                    outpatient: "Ich werde Ihnen einige Medikamente geben, die Sie zu Hause einnehmen sollen.",
+                    noBeds: "Ich empfehle Ihnen, sich im Krankenhaus aufzunehmen, aber wir haben keine Betten mehr frei.",
+                    patientResponse: {
+                        inpatientAgree: "Danke, Dr. Ich denke, dies ist die richtige Entscheidung.",
+                        inpatientDisagree: "Ist es wirklich notwendig? Ich hoffe, ich kann nach Hause gehen...",
+                        outpatientAgree: "Danke, Dr. Ich schätze Ihre Hilfe.",
+                        outpatientDisagree: "Sind Sie sicher? Ich fühle mich sehr unwohl..."
+                    }
+                }
+            },
+            zh: {
+                welcome: "欢迎来到您的诊所！点击开始按钮开始您的一天。",
+                startDay: "开始一天",
+                waiting: "等待病人...",
+                makeDiagnosis: "做出诊断",
+                askMore: "询问更多",
+                admitClinic: "住院治疗",
+                outpatient: "门诊治疗",
+                day: "天数",
+                round: "回合",
+                prestige: "声望",
+                beds: "床位",
+                menu: "菜单",
+                language: "语言",
+                close: "关闭",
+                nextPatient: "请下一位病人！",
+                endDay: "一天结束！{released}位病人已出院。",
+                tomorrowPatients: "明天您将接诊{count}位病人。",
+                patientInfo: {
+                    name: "姓名",
+                    age: "年龄",
+                    weight: "体重",
+                    height: "身高"
+                },
+                symptoms: {
+                    cough: "咳嗽",
+                    runnyNose: "流鼻涕",
+                    soreThroat: "喉咙痛",
+                    sneezing: "打喷嚏",
+                    mildFever: "低烧",
+                    highFever: "高烧",
+                    bodyAches: "身体疼痛",
+                    fatigue: "疲劳",
+                    headache: "头痛",
+                    nausea: "恶心",
+                    vomiting: "呕吐",
+                    diarrhea: "腹泻",
+                    stomachCramps: "胃痉挛",
+                    blurredVision: "视力模糊",
+                    swelling: "肿胀",
+                    bruising: "瘀伤",
+                    pain: "疼痛",
+                    difficultyWalking: "行走困难",
+                    stiffness: "僵硬",
+                    rash: "皮疹",
+                    itching: "瘙痒",
+                    difficultyBreathing: "呼吸困难",
+                    hives: "荨麻疹",
+                    difficultySwallowing: "吞咽困难",
+                    swollenLymphNodes: "淋巴结肿大",
+                    chestDiscomfort: "胸部不适",
+                    shortnessOfBreath: "气短"
+                },
+                questions: {
+                    howLong: "您感觉不适多久了？",
+                    medications: "您正在服用什么药物吗？",
+                    similarSymptoms: "您以前有过类似的症状吗？",
+                    symptomsBetterWorse: "有什么会让症状好转或恶化吗？",
+                    contactSick: "您最近接触过生病的人吗？",
+                    appetiteSleep: "您的食欲和睡眠情况如何？",
+                    moreSymptoms: "您能详细描述一下症状吗？"
+                },
+                responses: {
+                    noMedications: "没有，我没有服用任何药物。",
+                    otcPainRelievers: "只服用了一些非处方止痛药。",
+                    bloodPressure: "我在服用高血压药物。",
+                    antihistamines: "我在服用抗组胺药治疗过敏。",
+                    unsure: "说实话，我不太确定。",
+                    notNoticed: "这是个好问题。我还没怎么注意。",
+                    nothingUnusual: "没有，我想不出有什么异常。",
+                    worseEvenings: "是的，晚上似乎会变得更糟。",
+                    toldAllSymptoms: "我想我已经告诉您所有症状了。",
+                    daysAgo: "大约{days}天前开始的。"
+                },
+                diagnoses: {
+                    commonCold: "普通感冒",
+                    flu: "流感",
+                    foodPoisoning: "食物中毒",
+                    migraine: "偏头痛",
+                    sprainedAnkle: "脚踝扭伤",
+                    allergicReaction: "过敏反应",
+                    strepThroat: "链球菌性咽炎",
+                    bronchitis: "支气管炎"
+                },
+                // Medication options
+                medOptions: {
+                    antibiotics: "给抗生素",
+                    morphine: "给吗啡",
+                    painkiller: "给止痛药",
+                    antihistamine: "给抗组胺药"
+                },
+                treatments: {
+                    inpatient: "我建议您住院治疗。",
+                    outpatient: "我会给您开一些带回家服用的药物。",
+                    noBeds: "我建议您住院，但我们没有床位了。",
+                    patientResponse: {
+                        inpatientAgree: "谢谢医生，我认为这是正确的决定。",
+                        inpatientDisagree: "真的有必要吗？我希望能回家...",
+                        outpatientAgree: "谢谢医生，我很感激您的帮助。",
+                        outpatientDisagree: "您确定吗？我感觉非常不舒服..."
+                    }
+                },
+                greetings: {
+                    initial: "医生您好，我是{firstName}。最近感觉不太舒服。",
+                    symptom: "我一直在经历{symptom}。"
+                },
+                diagnosisPrompt: "我认为您患有{diagnosis}。",
+                correctDiagnosisResponse: "听起来很符合我的症状。接下来怎么治疗？",
+                uncertainDiagnosisResponse: "我不确定，但有一些症状符合......",
+                wrongDiagnosisResponse: "我觉得这不太对，医生。我的症状不同。"
+            }
+        };
+        
+        // Patient generator
+        function generatePatient() {
+            const firstNames = ["John", "Emma", "Michael", "Sophia", "William", "Olivia", "James", "Ava", "Robert", "Isabella"];
+            const lastNames = ["Smith", "Johnson", "Williams", "Jones", "Brown", "Davis", "Miller", "Wilson", "Moore", "Taylor"];
+            const ages = [25, 32, 45, 18, 67, 52, 38, 29, 71, 42];
+            const weights = [65, 72, 85, 58, 90, 75, 68, 82, 63, 77];
+            const heights = [170, 165, 182, 160, 175, 168, 190, 172, 158, 180];
+            
+            // Randomly select a diagnosis
+            const diagnosis = gameState.diagnoses[Math.floor(Math.random() * gameState.diagnoses.length)];
+            
+            // Create patient object
+            return {
+                firstName: firstNames[Math.floor(Math.random() * firstNames.length)],
+                lastName: lastNames[Math.floor(Math.random() * lastNames.length)],
+                age: ages[Math.floor(Math.random() * ages.length)],
+                weight: weights[Math.floor(Math.random() * weights.length)],
+                height: heights[Math.floor(Math.random() * heights.length)],
+                actualDiagnosis: diagnosis,
+                revealedSymptoms: [diagnosis.symptoms[0]], // Start with one symptom
+                remainingSymptoms: diagnosis.symptoms.slice(1),
+                needsAdmission: Math.random() > 0.5, // 50% chance of needing admission
+                avatar: Math.random() > 0.5 ? 1 : 2, // Random avatar
+                health: Math.floor(Math.random() * 101) // 0-100 health
+            };
+        }
+        
+        // Update UI
+        function updateUI() {
+            dayEl.textContent = gameState.day;
+            roundEl.textContent = gameState.round;
+            roundsTotalEl.textContent = gameState.maxRounds;
+            prestigeEl.textContent = gameState.prestige;
+            bedsAvailableEl.textContent = gameState.bedsAvailable;
+            bedsTotalEl.textContent = gameState.bedsTotal;
+        }
+        
+        // Add dialogue with typing effect
+        function addDialogue(text, isPatient = false) {
+            const dialogueEl = document.createElement('div');
+            dialogueEl.classList.add('dialogue-text', 'typing');
+            const lang = gameState.language;
+            const patientLabel = lang === 'zh' ? '病人：' : 'Patient: ';
+            const doctorLabel = lang === 'zh' ? '医生：' : 'Doctor: ';
+            if (isPatient) {
+                dialogueEl.classList.add('patient-text');
+                dialogueEl.textContent = patientLabel;
+            } else {
+                dialogueEl.classList.add('doctor-text');
+                dialogueEl.textContent = doctorLabel;
+            }
+            dialogueBoxEl.appendChild(dialogueEl);
+            dialogueBoxEl.scrollTop = dialogueBoxEl.scrollHeight;
+
+            let index = 0;
+            const typingInterval = setInterval(() => {
+                if (index < text.length) {
+                    dialogueEl.textContent = (isPatient ? patientLabel : doctorLabel) + text.substring(0, index + 1);
+                    index++;
+                } else {
+                    clearInterval(typingInterval);
+                    dialogueEl.classList.remove('typing');
+                }
+            }, 50);
+        }
+        
+        // Start a new patient encounter
+        function startPatientEncounter() {
+            // Hide treatment panel at start of each encounter
+            document.getElementById('treatment-panel').style.display = 'none';
+            // Initialize queue on new day
+            if (gameState.patients.length === 0) {
+                for (let i = 0; i < gameState.maxRounds; i++) {
+                    gameState.patients.push(generatePatient());
+                }
+            }
+            // Shift next patient
+            gameState.currentPatient = gameState.patients.shift();
+            gameState.conversationStage = 0;
+            // Render queue avatars
+            const queueEl = document.getElementById('patient-queue');
+            queueEl.innerHTML = '';
+            gameState.patients.forEach(p => {
+                const avatarDiv = document.createElement('div');
+                avatarDiv.className = 'queue-avatar';
+                avatarDiv.style.backgroundImage = `url('assets/patient-${p.avatar}.png')`;
+                queueEl.appendChild(avatarDiv);
+            });
+
+            // Create patient element with random avatar
+            const patient = document.createElement('div');
+            patient.className = 'patient';
+            const avatarNum = gameState.currentPatient.avatar;
+            patient.style.backgroundImage = `url('assets/patient-${avatarNum}.png')`;
+            // Add health bar inside patient
+            const bar = document.createElement('div');
+            bar.className = 'health-bar';
+            const inner = document.createElement('div');
+            inner.className = 'health-bar-inner';
+            inner.style.width = `${gameState.currentPatient.health}%`;
+            bar.appendChild(inner);
+            patient.appendChild(bar);
+            clinicView.appendChild(patient);
+            
+            // Store avatar number for bed placement
+            gameState.currentPatient.avatar = avatarNum;
+            
+            // Animate patient entering from top
+            patient.style.animation = 'patientEnter 1s forwards';
+            
+            // Wait for animation to complete before showing dialogue
+            setTimeout(() => {
+            // Update patient info
+                const lang = gameState.language;
+            patientInfoEl.innerHTML = `
+                    <strong>${translations[lang].patientInfo.name}:</strong> ${gameState.currentPatient.firstName} ${gameState.currentPatient.lastName}<br>
+                    <strong>${translations[lang].patientInfo.age}:</strong> ${gameState.currentPatient.age}<br>
+                    <strong>${translations[lang].patientInfo.weight}:</strong> ${gameState.currentPatient.weight} kg<br>
+                    <strong>${translations[lang].patientInfo.height}:</strong> ${gameState.currentPatient.height} cm
+            `;
+            
+            // Clear dialogue
+            dialogueBoxEl.innerHTML = '';
+            
+            // Initial patient dialogue
+                if (lang === 'zh') {
+                    addDialogue(translations[lang].greetings.initial.replace('{firstName}', gameState.currentPatient.firstName), true);
+                } else {
+                    addDialogue(`Hello doctor, I'm ${gameState.currentPatient.firstName}. I've been feeling unwell lately.`, true);
+                }
+                setTimeout(() => {
+                    const symptom = translations[lang].symptoms[gameState.currentPatient.revealedSymptoms[0].replace(/\s+/g, '')] || gameState.currentPatient.revealedSymptoms[0];
+                    if (lang === 'zh') {
+                        addDialogue(translations[lang].greetings.symptom.replace('{symptom}', symptom), true);
+                    } else {
+                        addDialogue(`I've been experiencing ${symptom}.`, true);
+                    }
+                    setTimeout(() => {
+            showQuestionOptions();
+                    }, 1000);
+                }, 2000);
+            }, 1000);
+        }
+        
+        // Show question options
+        function showQuestionOptions() {
+            startContainerEl.style.display = 'none';
+            optionsContainerEl.style.display = 'grid';
+            optionsContainerEl.innerHTML = '';
+            treatmentContainerEl.style.display = 'none';
+            
+            const questionOptions = [
+                translations[gameState.language].questions.howLong,
+                translations[gameState.language].questions.medications,
+                translations[gameState.language].questions.similarSymptoms,
+                translations[gameState.language].questions.symptomsBetterWorse,
+                translations[gameState.language].questions.contactSick,
+                translations[gameState.language].questions.appetiteSleep
+            ];
+            
+            // Add symptom-specific questions if there are remaining symptoms
+            if (gameState.currentPatient.remainingSymptoms.length > 0) {
+                questionOptions.push(translations[gameState.language].questions.moreSymptoms);
+            }
+            
+            // Create buttons for each option
+            questionOptions.forEach(question => {
+                const btn = document.createElement('button');
+                btn.classList.add('option-btn');
+                if (gameState.language === 'zh') {
+                    btn.classList.add('chinese-text');
+                }
+                btn.textContent = question;
+                btn.addEventListener('click', () => handleQuestionResponse(question));
+                optionsContainerEl.appendChild(btn);
+            });
+        }
+        
+        // Handle question response
+        function handleQuestionResponse(question) {
+            addDialogue(question);
+            
+            // Different responses based on the question
+            let response = "";
+            if (question === translations[gameState.language].questions.moreSymptoms) {
+                if (gameState.currentPatient.remainingSymptoms.length > 0) {
+                    const newSymptom = gameState.currentPatient.remainingSymptoms.shift();
+                    gameState.currentPatient.revealedSymptoms.push(newSymptom);
+                    response = `实际上，我还出现了${translations[gameState.language].symptoms[newSymptom.replace(/\s+/g, '')] || newSymptom}。`;
+                } else {
+                    response = translations[gameState.language].responses.toldAllSymptoms;
+                }
+            } else if (question === translations[gameState.language].questions.howLong) {
+                const days = Math.floor(Math.random() * 7) + 1;
+                response = translations[gameState.language].responses.daysAgo.replace('{days}', days);
+            } else if (question === translations[gameState.language].questions.medications) {
+                const responses = [
+                    translations[gameState.language].responses.noMedications,
+                    translations[gameState.language].responses.otcPainRelievers,
+                    translations[gameState.language].responses.bloodPressure,
+                    translations[gameState.language].responses.antihistamines
+                ];
+                response = responses[Math.floor(Math.random() * responses.length)];
+            } else {
+                const genericResponses = [
+                    translations[gameState.language].responses.unsure,
+                    translations[gameState.language].responses.notNoticed,
+                    translations[gameState.language].responses.nothingUnusual,
+                    translations[gameState.language].responses.worseEvenings
+                ];
+                response = genericResponses[Math.floor(Math.random() * genericResponses.length)];
+            }
+            
+            // Add response after a delay
+            setTimeout(() => {
+                addDialogue(response, true);
+            // Increment conversation stage
+            gameState.conversationStage++;
+                // Show options again after response
+                setTimeout(() => {
+            showQuestionOptions();
+                }, 1000);
+            }, 1000);
+        }
+        
+        // Make diagnosis
+        function makeDiagnosis() {
+            optionsContainerEl.style.display = 'grid';
+            optionsContainerEl.innerHTML = '';
+            diagnosisContainerEl.style.display = 'none';
+            
+            // Show all possible diagnoses
+            gameState.diagnoses.forEach(diagnosis => {
+                const btn = document.createElement('button');
+                btn.classList.add('option-btn');
+                if (gameState.language === 'zh') {
+                    btn.classList.add('chinese-text');
+                }
+                btn.textContent = translations[gameState.language].diagnoses[diagnosis.name.replace(/\s+/g, '')] || diagnosis.name;
+                btn.addEventListener('click', () => handleDiagnosis(diagnosis));
+                optionsContainerEl.appendChild(btn);
+            });
+        }
+        
+        // Handle diagnosis selection
+        function handleDiagnosis(diagnosis) {
+            const diagName = translations[gameState.language].diagnoses[diagnosis.name.replace(/\s+/g, '')] || diagnosis.name;
+            addDialogue(translations[gameState.language].diagnosisPrompt.replace('{diagnosis}', diagName));
+            
+            // Check if diagnosis is correct
+            if (diagnosis.id === gameState.currentPatient.actualDiagnosis.id) {
+                addDialogue(translations[gameState.language].correctDiagnosisResponse || "That sounds right based on my symptoms. What's the treatment?", true);
+                gameState.prestige += 10;
+                updateUI();
+                // Show treatment panel for On-site and Outpatient options
+                document.getElementById('treatment-panel').style.display = 'flex';
+            } else {
+                // Calculate how many symptoms match
+                const matchingSymptoms = diagnosis.symptoms.filter(symptom => 
+                    gameState.currentPatient.actualDiagnosis.symptoms.includes(symptom)
+                );
+                
+                if (matchingSymptoms.length >= 2) {
+                    addDialogue(translations[gameState.language].uncertainDiagnosisResponse || "I'm not sure that's right, but some of the symptoms match...", true);
+                    gameState.prestige -= 5;
+                } else {
+                    // Create explosion effect
+                    const patient = document.querySelector('.patient');
+                    const patientRect = patient.getBoundingClientRect();
+                    const clinicRect = clinicView.getBoundingClientRect();
+                    
+                    // Create blood splash
+                    const splash = document.createElement('div');
+                    splash.className = 'blood-splash';
+                    splash.style.left = `${patientRect.left - clinicRect.left - 20}px`;
+                    splash.style.top = `${patientRect.top - clinicRect.top}px`;
+                    clinicView.appendChild(splash);
+                    
+                    // Create explosion particles (body parts)
+                    for (let i = 0; i < 20; i++) {
+                        const particle = document.createElement('div');
+                        particle.className = 'explosion-particle';
+                        particle.style.left = `${patientRect.left - clinicRect.left + 15}px`;
+                        particle.style.top = `${patientRect.top - clinicRect.top + 15}px`;
+                        
+                        // Random direction and distance
+                        const angle = (Math.random() * 360) * (Math.PI / 180);
+                        const distance = 50 + Math.random() * 50;
+                        const tx = Math.cos(angle) * distance;
+                        const ty = Math.sin(angle) * distance;
+                        
+                        particle.style.setProperty('--tx', `${tx}px`);
+                        particle.style.setProperty('--ty', `${ty}px`);
+                        
+                        clinicView.appendChild(particle);
+                    }
+                    
+                    // Create blood particles
+                    for (let i = 0; i < 15; i++) {
+                        const blood = document.createElement('div');
+                        blood.className = 'blood-particle';
+                        blood.style.left = `${patientRect.left - clinicRect.left + 15}px`;
+                        blood.style.top = `${patientRect.top - clinicRect.top + 15}px`;
+                        
+                        // Random direction and distance
+                        const angle = (Math.random() * 360) * (Math.PI / 180);
+                        const distance = 30 + Math.random() * 30;
+                        const tx = Math.cos(angle) * distance;
+                        const ty = Math.sin(angle) * distance;
+                        
+                        blood.style.setProperty('--tx', `${tx}px`);
+                        blood.style.setProperty('--ty', `${ty}px`);
+                        
+                        clinicView.appendChild(blood);
+                    }
+                    
+                    // Animate explosion
+                    patient.style.animation = 'explode 0.5s forwards';
+                    splash.style.animation = 'splash 0.5s forwards';
+                    document.querySelectorAll('.explosion-particle, .blood-particle').forEach(particle => {
+                        particle.style.animation = 'particleFly 0.5s forwards';
+                    });
+                    
+                    addDialogue(translations[gameState.language].wrongDiagnosisResponse || "I don't think that's right at all, doctor. My symptoms are different.", true);
+                    gameState.prestige -= 15;
+                    
+                    // Clean up after animation
+                    setTimeout(() => {
+                        patient.remove();
+                        splash.remove();
+                        endPatientEncounter();
+                    }, 500);
+                }
+                updateUI();
+            }
+        }
+        
+        // Show treatment options
+        function showTreatmentOptions() {
+            optionsContainerEl.style.display = 'none';
+            treatmentContainerEl.style.display = 'block';
+        }
+        
+        // Handle treatment selection
+        function handleTreatment(isInpatient) {
+            if (isInpatient) {
+                if (gameState.bedsAvailable > 0) {
+                    if (gameState.currentPatient.needsAdmission) {
+                        addDialogue(translations[gameState.language].treatments.inpatient);
+                        addDialogue(translations[gameState.language].treatments.patientResponse.inpatientAgree, true);
+                        gameState.prestige += 15;
+                    } else {
+                        addDialogue(translations[gameState.language].treatments.inpatient);
+                        addDialogue(translations[gameState.language].treatments.patientResponse.inpatientDisagree, true);
+                        gameState.prestige -= 5;
+                    }
+                    
+                    // Find first available bed
+                    let bedIndex = -1;
+                    for (let i = 0; i < beds.length; i++) {
+                        if (!gameState.occupiedBeds.has(i)) {
+                            bedIndex = i;
+                            gameState.occupiedBeds.add(i);
+                            break;
+                        }
+                    }
+                    
+                    if (bedIndex !== -1) {
+                        const bed = beds[bedIndex];
+                        bed.classList.add('occupied');
+                        
+                        // Create and add patient avatar to bed
+                        const patientAvatar = document.createElement('div');
+                        patientAvatar.className = 'patient-avatar';
+                        patientAvatar.style.backgroundImage = `url('assets/patient-${gameState.currentPatient.avatar}.png')`;
+                        bed.appendChild(patientAvatar);
+                        
+                        // Animate patient to bed
+                        const patient = document.querySelector('.patient');
+                        const bedRect = bed.getBoundingClientRect();
+                        const clinicRect = clinicView.getBoundingClientRect();
+                        const bedTop = bedRect.top - clinicRect.top + bedRect.height / 2;
+                        
+                        patient.style.setProperty('--bed-top', `${bedTop}px`);
+                        patient.style.animation = 'patientToBed 1s forwards';
+                        
+                    gameState.bedsAvailable--;
+                    }
+                } else {
+                    addDialogue(translations[gameState.language].treatments.noBeds);
+                    addDialogue("那太令人失望了。那我该怎么办？", true);
+                    addDialogue(translations[gameState.language].treatments.outpatient);
+                    gameState.prestige -= 10;
+                    
+                    // Animate patient exiting
+                    const patient = document.querySelector('.patient');
+                    patient.style.animation = 'patientExit 1s forwards';
+                }
+            } else { // Outpatient
+                if (gameState.currentPatient.needsAdmission) {
+                    addDialogue(translations[gameState.language].treatments.outpatient);
+                    addDialogue(translations[gameState.language].treatments.patientResponse.outpatientDisagree, true);
+                    gameState.prestige -= 10;
+                } else {
+                    addDialogue(translations[gameState.language].treatments.outpatient);
+                    addDialogue(translations[gameState.language].treatments.patientResponse.outpatientAgree, true);
+                    gameState.prestige += 10;
+                }
+                
+                // Animate patient exiting
+                const patient = document.querySelector('.patient');
+                patient.style.animation = 'patientExit 1s forwards';
+            }
+            
+            updateUI();
+            
+            // Clear dialogue and remove patient after animation
+            setTimeout(() => {
+                dialogueBoxEl.innerHTML = '';
+                const patient = document.querySelector('.patient');
+                if (patient) {
+                    patient.remove();
+                }
+            endPatientEncounter();
+            }, 1000);
+        }
+        
+        // End patient encounter
+        function endPatientEncounter() {
+            gameState.round++;
+            
+            if (gameState.round > gameState.maxRounds) {
+                // End of day - clean up all particles
+                document.querySelectorAll('.explosion-particle, .blood-particle').forEach(particle => {
+                    particle.remove();
+                });
+                
+                // End of day
+                gameState.day++;
+                gameState.round = 1;
+                // Generate new random number of rounds for the next day
+                gameState.maxRounds = Math.floor(Math.random() * 4) + 3;
+                // Release some beds for the next day
+                const releasedBeds = Math.floor(Math.random() * (5 - gameState.bedsAvailable));
+                for (let i = 0; i < releasedBeds; i++) {
+                    if (gameState.occupiedBeds.size > 0) {
+                        const bedIndex = Array.from(gameState.occupiedBeds)[0];
+                        gameState.occupiedBeds.delete(bedIndex);
+                        beds[bedIndex].classList.remove('occupied');
+                    }
+                }
+                gameState.bedsAvailable += releasedBeds;
+                if (gameState.bedsAvailable > 5) gameState.bedsAvailable = 5;
+                
+                addDialogue(translations[gameState.language].endDay.replace('{released}', releasedBeds));
+                addDialogue(translations[gameState.language].tomorrowPatients.replace('{count}', gameState.maxRounds));
+            } else {
+                addDialogue(translations[gameState.language].nextPatient);
+            }
+            
+            updateUI();
+            startContainerEl.style.display = 'block';
+            optionsContainerEl.style.display = 'none';
+            treatmentContainerEl.style.display = 'none';
+            patientInfoEl.textContent = translations[gameState.language].waiting;
+        }
+        
+        // Update language
+        function updateLanguage(lang) {
+            gameState.language = lang;
+            
+            // Update UI text
+            startBtnEl.textContent = translations[lang].startDay;
+            patientInfoEl.textContent = translations[lang].waiting;
+            treatInpatientBtnEl.textContent = translations[lang].admitClinic;
+            treatOutpatientBtnEl.textContent = translations[lang].outpatient;
+            
+            // Apply Chinese font class when language is Chinese
+            const elements = [startBtnEl, patientInfoEl, treatInpatientBtnEl, treatOutpatientBtnEl];
+            
+            elements.forEach(el => {
+                if (lang === 'zh') {
+                    el.classList.add('chinese-text');
+                } else {
+                    el.classList.remove('chinese-text');
+                }
+            });
+            
+            // Clear dialogue and add welcome message
+            if (gameState.round === 1 && gameState.day === 1) {
+                dialogueBoxEl.innerHTML = '';
+                const welcomeEl = document.createElement('div');
+                welcomeEl.classList.add('dialogue-text');
+                if (lang === 'zh') {
+                    welcomeEl.classList.add('chinese-text');
+                }
+                welcomeEl.textContent = translations[lang].welcome;
+                dialogueBoxEl.appendChild(welcomeEl);
+            }
+        }
+        
+        // Event listeners
+        startBtnEl.addEventListener('click', startPatientEncounter);
+        diagnoseBtnEl.addEventListener('click', () => {
+            // Remove existing options
+            document.querySelectorAll('.card-option').forEach(el => el.remove());
+            const rect = diagnoseBtnEl.getBoundingClientRect();
+            const items = gameState.diagnoses.map(d => ({
+                label: translations[gameState.language].diagnoses[d.name.replace(/\s+/g, '')] || d.name,
+                value: d
+            }));
+            const total = items.length;
+            const baseSpread = 20;
+            const fanAngle = Math.min(180, (total - 1) * baseSpread);
+            const startAngle = -fanAngle / 2;
+            const centerX = rect.left + rect.width / 2 + window.scrollX;
+            const centerY = rect.top + rect.height / 2 + window.scrollY;
+            items.forEach((item, idx) => {
+                const angle = (startAngle + (fanAngle / (total - 1) * idx)) * Math.PI / 180;
+                const radius = 80 + total * 5;
+                const finalX = centerX + Math.cos(angle) * radius;
+                const finalY = centerY + Math.sin(angle) * radius;
+                const card = document.createElement('button');
+                card.className = 'card-option';
+                card.textContent = item.label;
+                card.style.left = `${centerX}px`;
+                card.style.top = `${centerY}px`;
+                document.body.appendChild(card);
+                card.style.transitionDelay = `${idx * 50}ms`;
+                requestAnimationFrame(() => {
+                    card.style.opacity = '1';
+                    card.style.transform = `translate(${finalX - centerX}px, ${finalY - centerY}px)`;
+                });
+                card.addEventListener('click', () => {
+                    document.querySelectorAll('.card-option').forEach(el => el.remove());
+                    handleDiagnosis(item.value);
+                });
+            });
+        });
+        moreInfoBtnEl.addEventListener('click', () => {
+            document.querySelectorAll('.card-option').forEach(el => el.remove());
+            const rect = moreInfoBtnEl.getBoundingClientRect();
+            const questions = [
+                translations[gameState.language].questions.howLong,
+                translations[gameState.language].questions.medications,
+                translations[gameState.language].questions.similarSymptoms,
+                translations[gameState.language].questions.symptomsBetterWorse,
+                translations[gameState.language].questions.contactSick,
+                translations[gameState.language].questions.appetiteSleep
+            ];
+            if (gameState.currentPatient.remainingSymptoms.length > 0) {
+                questions.push(translations[gameState.language].questions.moreSymptoms);
+            }
+            const total = questions.length;
+            const baseSpread = 20;
+            const fanAngle = Math.min(180, (total - 1) * baseSpread);
+            const startAngle = -fanAngle / 2;
+            const centerX = rect.left + rect.width / 2 + window.scrollX;
+            const centerY = rect.top + rect.height / 2 + window.scrollY;
+            questions.forEach((text, idx) => {
+                const angle = (startAngle + (fanAngle / (total - 1) * idx)) * Math.PI / 180;
+                const radius = 80 + total * 5;
+                const finalX = centerX + Math.cos(angle) * radius;
+                const finalY = centerY + Math.sin(angle) * radius;
+                const card = document.createElement('button');
+                card.className = 'card-option';
+                card.textContent = text;
+                card.style.left = `${centerX}px`;
+                card.style.top = `${centerY}px`;
+                document.body.appendChild(card);
+                card.style.transitionDelay = `${idx * 50}ms`;
+                requestAnimationFrame(() => {
+                    card.style.opacity = '1';
+                    card.style.transform = `translate(${finalX - centerX}px, ${finalY - centerY}px)`;
+                });
+                card.addEventListener('click', () => {
+                    document.querySelectorAll('.card-option').forEach(el => el.remove());
+                    handleQuestionResponse(text);
+                });
+            });
+        });
+        treatInpatientBtnEl.addEventListener('click', () => handleTreatment(true));
+        treatOutpatientBtnEl.addEventListener('click', () => handleTreatment(false));
+        
+        // Menu event listeners
+        menuBtnEl.addEventListener('click', () => {
+            menuEl.style.display = 'block';
+            overlayEl.style.display = 'block';
+        });
+        
+        closeMenuBtnEl.addEventListener('click', () => {
+            menuEl.style.display = 'none';
+            overlayEl.style.display = 'none';
+        });
+        
+        overlayEl.addEventListener('click', () => {
+            menuEl.style.display = 'none';
+            overlayEl.style.display = 'none';
+        });
+        
+        // Language buttons
+        languageBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                updateLanguage(btn.dataset.lang);
+                menuEl.style.display = 'none';
+                overlayEl.style.display = 'none';
+            });
+        });
+        
+        // Keyboard shortcut for menu
+        document.addEventListener('keydown', (e) => {
+            if (e.key.toLowerCase() === 'm') {
+                if (menuEl.style.display === 'block') {
+                    menuEl.style.display = 'none';
+                    overlayEl.style.display = 'none';
+                } else {
+                    menuEl.style.display = 'block';
+                    overlayEl.style.display = 'block';
+                }
+            }
+        });
+        
+        // Initialize music player
+        function initMusicPlayer() {
+            // Set initial track
+            backgroundMusic.src = musicState.tracks[0].src;
+            updateMusicInfo();
+            
+            // Add event listeners
+            playPauseBtn.addEventListener('click', togglePlayPause);
+            backgroundMusic.addEventListener('ended', playNextTrack);
+            
+            // Keyboard shortcut
+            document.addEventListener('keydown', (e) => {
+                if (e.key.toLowerCase() === 'p') {
+                    togglePlayPause();
+                }
+            });
+        }
+        
+        // Toggle play/pause
+        function togglePlayPause() {
+            if (musicState.isPlaying) {
+                backgroundMusic.pause();
+                playPauseBtn.textContent = '▶';
+            } else {
+                backgroundMusic.play();
+                playPauseBtn.textContent = '⏸';
+            }
+            musicState.isPlaying = !musicState.isPlaying;
+            updateMusicInfo();
+        }
+        
+        // Play next track
+        function playNextTrack() {
+            musicState.currentTrack = (musicState.currentTrack + 1) % musicState.tracks.length;
+            backgroundMusic.src = musicState.tracks[musicState.currentTrack].src;
+            if (musicState.isPlaying) {
+                backgroundMusic.play();
+            }
+            updateMusicInfo();
+        }
+        
+        // Update music info display
+        function updateMusicInfo() {
+            const track = musicState.tracks[musicState.currentTrack];
+            musicInfo.textContent = musicState.isPlaying ? 
+                `Now Playing: ${track.name}` : 
+                'No music playing';
+        }
+        
+        // Initialize game
+        updateUI();
+        updateLanguage('zh');
+        initMusicPlayer();
+
+        buyBedBtnEl.addEventListener('click', () => {
+            if (gameState.prestige < 20) {
+                alert('Not enough prestige to buy a new bed.');
+                return;
+            }
+            gameState.prestige -= 20;
+            gameState.bedsTotal++;
+            gameState.bedsAvailable++;
+            updateUI();
+            const newBed = document.createElement('div');
+            newBed.className = 'bed';
+            bedsContainerEl.appendChild(newBed);
+            beds = document.querySelectorAll('.bed');
+        });
+
+        // Navigate to alternate universe game when clicking the title
+        document.getElementById('main-title').addEventListener('click', () => {
+            window.location.href = 'alternate.html';
+        });
+    </script>
+</body>
+</html>
+

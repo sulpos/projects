@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Alternate Universe Battle</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background-color: #121212; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; }
+  canvas { border: 2px solid #333; }
+  /* Console bar for draggable items */
+  .console-bar {
+    position: absolute;
+    bottom: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 10px;
+    z-index: 1000;
+  }
+  .console-bar img {
+    width: 40px;
+    height: 40px;
+    cursor: grab;
+  }
+</style>
+</head>
+<body>
+<canvas id="battle-canvas" width="600" height="400"></canvas>
+<div class="console-bar">
+  <img id="medkit-btn" src="assets/medkit.png" draggable="true" title="Medkit">
+  <img id="bluefire-btn" src="assets/blue-fire.png" draggable="true" title="Blue Fire">
+</div>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  // Preload images
+  const medkitImg = new Image(); medkitImg.src = 'assets/medkit.png';
+  const bluefireImg = new Image(); bluefireImg.src = 'assets/blue-fire.png';
+  const patientImg1 = new Image(); patientImg1.src = 'assets/patient-1.png';
+  const patientImg2 = new Image(); patientImg2.src = 'assets/patient-2.png';
+
+  // Arrays for items and fireballs
+  const items = [];
+  const fireballs = [];
+
+  // Handle drag-and-drop
+  ['medkit','bluefire'].forEach(type => {
+    const btn = document.getElementById(type + '-btn');
+    btn.addEventListener('dragstart', e => {
+      e.dataTransfer.setData('type', type);
+      e.dataTransfer.effectAllowed = 'copy';
+      e.dataTransfer.setDragImage(btn, 20, 20);
+    });
+  });
+  const canvas = document.getElementById('battle-canvas');
+  const ctx = canvas.getContext('2d');
+  canvas.addEventListener('dragover', e => e.preventDefault());
+  canvas.addEventListener('drop', e => {
+    e.preventDefault();
+    const type = e.dataTransfer.getData('type');
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    items.push({ type, x, y });
+  });
+
+  // Entities and explosions
+  const patients = [];
+  const explosions = [];
+  const colors = ['#4ecdc4','#ffbe0b','#4a6fa5','#ff6b6b'];
+
+  class Patient {
+    constructor(id) {
+      this.id = id;
+      this.x = Math.random() * canvas.width;
+      this.y = Math.random() * canvas.height;
+      this.health = 50 + Math.random() * 50;
+      this.speed = 0.5 + Math.random() * 1.5;
+      // use preloaded avatars
+      this.avatar = Math.random() > 0.5 ? 1 : 2;
+      this.img = this.avatar === 1 ? patientImg1 : patientImg2;
+      this.angle = Math.random() * 2 * Math.PI;
+      this.dead = false;
+      this.hasFire = false;
+      this.lastShot = 0;
+    }
+    update() {
+      if (this.dead) return;
+      this.angle += (Math.random() - 0.5) * 0.1;
+      this.x += Math.cos(this.angle) * this.speed;
+      this.y += Math.sin(this.angle) * this.speed;
+      this.x = Math.max(20, Math.min(canvas.width - 20, this.x));
+      this.y = Math.max(20, Math.min(canvas.height - 20, this.y));
+      items.forEach(item => {
+        const dx = this.x - item.x, dy = this.y - item.y;
+        if (Math.hypot(dx, dy) < 20) {
+          if (item.type === 'medkit') this.health = 100;
+          if (item.type === 'bluefire') this.hasFire = true;
+        }
+      });
+      if (this.hasFire) {
+        const now = Date.now();
+        if (now - this.lastShot > 3000) {
+          const others = patients.filter(p => p.id !== this.id && !p.dead);
+          if (others.length) {
+            const target = others[Math.floor(Math.random() * others.length)];
+            fireballs.push({ x: this.x, y: this.y, tx: target.x, ty: target.y, life: 300, dam: 80 });
+            this.lastShot = now;
+          }
+        }
+      }
+    }
+    draw() {
+      if (this.dead) return;
+      ctx.drawImage(this.img, this.x - 15, this.y - 15, 30, 30);
+      ctx.fillStyle = '#330000';
+      ctx.fillRect(this.x - 15, this.y - 25, 30, 6);
+      ctx.fillStyle = '#ff0000';
+      ctx.fillRect(this.x - 15, this.y - 25, 30 * (this.health / 100), 6);
+    }
+    fight(other) {
+      if (this.dead || other.dead) return;
+      const d = Math.hypot(other.x - this.x, other.y - this.y);
+      if (d < 30) {
+        this.health -= 0.3;
+        other.health -= 0.3;
+        if (this.health <= 0) this.explode();
+        if (other.health <= 0) other.explode();
+      }
+    }
+    explode() {
+      if (this.dead) return;
+      this.dead = true;
+      for (let i = 0; i < 20; i++) {
+        const ang = Math.random() * 2 * Math.PI;
+        const sp = 2 + Math.random() * 2;
+        explosions.push({ x: this.x, y: this.y, ang, sp, life: 30 });
+      }
+    }
+  }
+
+  function updateExplosions() { for (let i = explosions.length - 1; i >= 0; i--) { const e = explosions[i]; e.x += Math.cos(e.ang) * e.sp; e.y += Math.sin(e.ang) * e.sp; e.life--; if (e.life <= 0) explosions.splice(i, 1); } }
+  function drawExplosions() { ctx.fillStyle = '#8b0000'; explosions.forEach(e => ctx.fillRect(e.x, e.y, 4, 4)); }
+
+  function updateFireballs() { for (let i = fireballs.length - 1; i >= 0; i--) { const f = fireballs[i]; const dx = f.tx - f.x, dy = f.ty - f.y, dist = Math.hypot(dx, dy); if (dist < 5) { const target = patients.find(p => Math.hypot(p.x - f.tx, p.y - f.ty) < 5); if (target) { target.health -= f.dam; if (target.health <= 0) target.explode(); } fireballs.splice(i, 1); } else { f.x += dx / dist * 2; f.y += dy / dist * 2; f.life--; if (f.life <= 0) fireballs.splice(i, 1); } } }
+  function drawFireballs() { ctx.fillStyle = '#00aeff'; fireballs.forEach(f => { ctx.beginPath(); ctx.arc(f.x, f.y, 5, 0, 2 * Math.PI); ctx.fill(); }); }
+
+  for (let i = 0; i < 10; i++) patients.push(new Patient(i));
+
+  function loop() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    patients.forEach(p => p.update());
+    for (let i = 0; i < patients.length; i++) for (let j = i + 1; j < patients.length; j++) patients[i].fight(patients[j]);
+    updateFireballs();
+    patients.forEach(p => p.draw());
+    drawFireballs(); drawExplosions();
+    items.forEach(it => { const img = it.type === 'medkit' ? medkitImg : bluefireImg; ctx.drawImage(img, it.x - 20, it.y - 20, 40, 40); });
+    requestAnimationFrame(loop);
+  }
+  loop();
+});
+</script>
+</body>
+</html> 
