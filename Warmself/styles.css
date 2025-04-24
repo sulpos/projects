@@ -1,7 +1,7 @@
 /* styles.css */
 
-.grey-background {
-  background-color: rgba(32, 32, 32, 0.8) !important;
+.white-background {
+  background-color: rgba(225, 225, 225, 1) !important;
   background-image: none !important;
   filter: none !important;
 }

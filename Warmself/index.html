@@ -10,7 +10,7 @@
 </head>
 <body>
   <video id="bg-video" autoplay muted loop>
-    <source src="assets/jellyfish.mov" type="video/quicktime">
+    <source src="assets/jellyfish_5s.mov" type="video/quicktime">
     Your browser does not support the video tag.
   </video>
   <header>
@@ -131,10 +131,10 @@
 
         if (bgVideo.style.display === 'none' || bgVideo.style.display === '') {
           bgVideo.style.display = 'block';
-          body.classList.remove('grey-background');
+          body.classList.remove('white-background');
         } else {
           bgVideo.style.display = 'none';
-          body.classList.add('grey-background');
+          body.classList.add('white-background');
         }
       }
 
